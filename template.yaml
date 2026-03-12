@@ -361,11 +361,11 @@ Outputs:
 
   AppInstance1URL:
     Description: Private URL for App Instance
-    value: !Sub "http://${AppInstance1.PublicIp}"
+    Value: !Sub "http://${AppInstance1.PrivateIp}"
 
   AppInstance2URL:
     Description: Private URL for App Instance
-    value: !Sub "http://${AppInstance2.PublicIp}"
+    Value: !Sub "http://${AppInstance2.PrivateIp}"
 
   WebInstance1URL:
     Description: Public URL for Web Server
