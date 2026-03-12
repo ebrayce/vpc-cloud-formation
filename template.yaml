@@ -253,7 +253,7 @@ Resources:
     Properties:
       InstanceType: t3.micro
       ImageId: !Ref LatestAmiId
-      SubnetId: !Ref PrivateWebSubnet1
+      SubnetId: !Ref PublicSubnet1
       IamInstanceProfile: !Ref SSMInstanceProfile
       SecurityGroupIds: [ !Ref WebSG ]
       UserData:
@@ -274,7 +274,7 @@ Resources:
     Properties:
       InstanceType: t3.micro
       ImageId: !Ref LatestAmiId
-      SubnetId: !Ref PrivateWebSubnet2
+      SubnetId: !Ref PublicSubnet2
       IamInstanceProfile: !Ref SSMInstanceProfile
       SecurityGroupIds: [ !Ref WebSG ]
       UserData:
@@ -358,4 +358,12 @@ Outputs:
   AppInstance2Id:
     Description: App Server AZ2 Instance ID
     Value: !Ref AppInstance2
+
+  WebInstance1URL:
+    Description: Public URL for Web Server
+    Value: !Sub "http://${WebInstance1.PublicIp}"
+    
+  WebInstance2URL:
+    Description: Public URL for Web Server
+    Value: !Sub "http://${WebInstance2.PublicIp}"
 
