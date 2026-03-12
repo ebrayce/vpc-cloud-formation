@@ -362,7 +362,7 @@ Outputs:
   WebInstance1URL:
     Description: Public URL for Web Server
     Value: !Sub "http://${WebInstance1.PublicIp}"
-    
+
   WebInstance2URL:
     Description: Public URL for Web Server
     Value: !Sub "http://${WebInstance2.PublicIp}"
