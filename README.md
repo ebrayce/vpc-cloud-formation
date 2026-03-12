@@ -10,6 +10,6 @@ This project uses **AWS CloudFormation** to deploy a highly available, three-tie
 * **NAT Gateways**: Allows private instances to securely access the internet for updates.
 
 ## How to Deploy
-1. Upload `vpc-lab.yaml` to the AWS CloudFormation Console.
+1. Upload `vpc-cloudformation-deploy.yaml` to the AWS CloudFormation Console.
 2. Wait for `CREATE_COMPLETE`.
 3. Verify the web server by connecting via Session Manager and running `curl localhost`.
