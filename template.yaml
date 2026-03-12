@@ -358,14 +358,14 @@ Outputs:
   AppInstance2Id:
     Description: App Server AZ2 Instance ID
     Value: !Ref AppInstance2
-    
+
   AppInstance1URL:
     Description: Private URL for App Instance
-    value: !Sub "http://${AppInstance1.PrivateIp}"
+    value: !Sub "http://${AppInstance1.PublicIp}"
 
   AppInstance2URL:
     Description: Private URL for App Instance
-    value: !Sub "http://${AppInstance2.PrivateIp}"
+    value: !Sub "http://${AppInstance2.PublicIp}"
 
   WebInstance1URL:
     Description: Public URL for Web Server
