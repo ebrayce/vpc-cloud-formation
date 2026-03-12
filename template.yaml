@@ -111,6 +111,7 @@ Resources:
 
   NATGateway1:
     Type: AWS::EC2::NatGateway
+    DependsOn: VPCGatewayAttachment
     Properties:
       AllocationId: !GetAtt NAT1EIP.AllocationId
       SubnetId: !Ref PublicSubnet1
@@ -120,6 +121,7 @@ Resources:
 
   NATGateway2:
     Type: AWS::EC2::NatGateway
+    DependsOn: VPCGatewayAttachment
     Properties:
       AllocationId: !GetAtt NAT2EIP.AllocationId
       SubnetId: !Ref PublicSubnet2
@@ -135,6 +137,7 @@ Resources:
 
   PublicRoute:
     Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
     Properties:
       RouteTableId: !Ref PublicRouteTable
       DestinationCidrBlock: 0.0.0.0/0
@@ -233,6 +236,17 @@ Resources:
           ToPort: 80
           CidrIp: 0.0.0.0/0
 
+  AppSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow traffic from Web tier
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref WebSG
+
   # --- COMPUTE (EC2) ---
   WebInstance1:
     Type: AWS::EC2::Instance
@@ -283,6 +297,7 @@ Resources:
       ImageId: !Ref LatestAmiId
       SubnetId: !Ref PrivateAppSubnet1
       IamInstanceProfile: !Ref SSMInstanceProfile
+      SecurityGroupIds: [ !Ref AppSG ]
       Tags:
         - Key: Name
           Value: App-Server-AZ1
@@ -294,6 +309,53 @@ Resources:
       ImageId: !Ref LatestAmiId
       SubnetId: !Ref PrivateAppSubnet2
       IamInstanceProfile: !Ref SSMInstanceProfile
+      SecurityGroupIds: [ !Ref AppSG ]
       Tags:
         - Key: Name
           Value: App-Server-AZ2
+
+Outputs:
+  VPCId:
+    Description: VPC ID
+    Value: !Ref VPC
+
+  PublicSubnet1Id:
+    Description: Public Subnet AZ1
+    Value: !Ref PublicSubnet1
+
+  PublicSubnet2Id:
+    Description: Public Subnet AZ2
+    Value: !Ref PublicSubnet2
+
+  PrivateWebSubnet1Id:
+    Description: Private Web Subnet AZ1
+    Value: !Ref PrivateWebSubnet1
+
+  PrivateWebSubnet2Id:
+    Description: Private Web Subnet AZ2
+    Value: !Ref PrivateWebSubnet2
+
+  PrivateAppSubnet1Id:
+    Description: Private App Subnet AZ1
+    Value: !Ref PrivateAppSubnet1
+
+  PrivateAppSubnet2Id:
+    Description: Private App Subnet AZ2
+    Value: !Ref PrivateAppSubnet2
+
+  WebInstance1Id:
+    Description: Web Server AZ1 Instance ID
+    Value: !Ref WebInstance1
+
+  WebInstance2Id:
+    Description: Web Server AZ2 Instance ID
+    Value: !Ref WebInstance2
+
+  AppInstance1Id:
+    Description: App Server AZ1 Instance ID
+    Value: !Ref AppInstance1
+
+  AppInstance2Id:
+    Description: App Server AZ2 Instance ID
+    Value: !Ref AppInstance2
+
