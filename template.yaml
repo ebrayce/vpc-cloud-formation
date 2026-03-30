@@ -8,32 +8,21 @@ Parameters:
     Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64'
 
 Resources:
-  # --- NETWORK FOUNDATION ---
   VPC:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: 10.0.0.0/16
       EnableDnsSupport: true
       EnableDnsHostnames: true
-      Tags:
-        - Key: Name
-          Value: Lab-VPC
+      Tags: [{Key: Name, Value: Lab-VPC}]
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
-    Properties:
-      Tags:
-        - Key: Name
-          Value: Lab-IGW
-
   VPCGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      VpcId: !Ref VPC
-      InternetGatewayId: !Ref InternetGateway
+    Properties: {VpcId: !Ref VPC, InternetGatewayId: !Ref InternetGateway}
 
-  # --- SUBNETS ---
-  # Public Subnets for NAT Gateways
+  # --- SUBNETS (1 Public, 1 Private per AZ) ---
   PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
@@ -41,9 +30,7 @@ Resources:
       AvailabilityZone: !Select [ 0, !GetAZs '' ]
       CidrBlock: 10.0.1.0/24
       MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: Public-Subnet-AZ1
+      Tags: [{Key: Name, Value: Public-Subnet-AZ1}]
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -52,210 +39,93 @@ Resources:
       AvailabilityZone: !Select [ 1, !GetAZs '' ]
       CidrBlock: 10.0.2.0/24
       MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: Public-Subnet-AZ2
+      Tags: [{Key: Name, Value: Public-Subnet-AZ2}]
 
-  # Private Subnets for Web Tier
-  PrivateWebSubnet1:
+  PrivateSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [ 0, !GetAZs '' ]
       CidrBlock: 10.0.10.0/24
-      Tags:
-        - Key: Name
-          Value: Private-Web-AZ1
+      Tags: [{Key: Name, Value: Private-Subnet-AZ1}]
 
-  PrivateWebSubnet2:
+  PrivateSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [ 1, !GetAZs '' ]
       CidrBlock: 10.0.11.0/24
-      Tags:
-        - Key: Name
-          Value: Private-Web-AZ2
+      Tags: [{Key: Name, Value: Private-Subnet-AZ2}]
 
-  # Private Subnets for App Tier
-  PrivateAppSubnet1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
-      CidrBlock: 10.0.20.0/24
-      Tags:
-        - Key: Name
-          Value: Private-App-AZ1
-
-  PrivateAppSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 1, !GetAZs '' ]
-      CidrBlock: 10.0.21.0/24
-      Tags:
-        - Key: Name
-          Value: Private-App-AZ2
-
-  # --- NAT GATEWAYS & EIPS ---
+  # --- NAT GATEWAY (Placed in Public Subnet 1) ---
   NAT1EIP:
     Type: AWS::EC2::EIP
-    Properties:
-      Domain: vpc
-
-  NAT2EIP:
-    Type: AWS::EC2::EIP
-    Properties:
-      Domain: vpc
-
+    Properties: {Domain: vpc}
   NATGateway1:
-    Type: AWS::EC2::NatGateway
-    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::NATGateway
     Properties:
       AllocationId: !GetAtt NAT1EIP.AllocationId
       SubnetId: !Ref PublicSubnet1
-      Tags:
-        - Key: Name
-          Value: NAT-GW-AZ1
-
-  NATGateway2:
-    Type: AWS::EC2::NatGateway
-    DependsOn: VPCGatewayAttachment
-    Properties:
-      AllocationId: !GetAtt NAT2EIP.AllocationId
-      SubnetId: !Ref PublicSubnet2
-      Tags:
-        - Key: Name
-          Value: NAT-GW-AZ2
 
   # --- ROUTING ---
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-
+    Properties: {VpcId: !Ref VPC}
   PublicRoute:
     Type: AWS::EC2::Route
-    DependsOn: VPCGatewayAttachment
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
+    Properties: {RouteTableId: !Ref PublicRouteTable, DestinationCidrBlock: 0.0.0.0/0, GatewayId: !Ref InternetGateway}
 
-  PublicSubnet1Assoc:
+  PublicAssoc1:
     Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet1
-
-  PublicSubnet2Assoc:
+    Properties: {RouteTableId: !Ref PublicRouteTable, SubnetId: !Ref PublicSubnet1}
+  PublicAssoc2:
     Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet2
+    Properties: {RouteTableId: !Ref PublicRouteTable, SubnetId: !Ref PublicSubnet2}
 
-  # Private Routing (AZ1)
-  PrivateRouteTable1:
+  PrivateRouteTable:
     Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-
-  PrivateRoute1:
+    Properties: {VpcId: !Ref VPC}
+  PrivateRoute:
     Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable1
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NATGateway1
+    Properties: {RouteTableId: !Ref PrivateRouteTable, DestinationCidrBlock: 0.0.0.0/0, NatGatewayId: !Ref NATGateway1}
 
-  PrivateWebSubnet1Assoc:
+  PrivateAssoc1:
     Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable1
-      SubnetId: !Ref PrivateWebSubnet1
-
-  PrivateAppSubnet1Assoc:
+    Properties: {RouteTableId: !Ref PrivateRouteTable, SubnetId: !Ref PrivateSubnet1}
+  PrivateAssoc2:
     Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable1
-      SubnetId: !Ref PrivateAppSubnet1
+    Properties: {RouteTableId: !Ref PrivateRouteTable, SubnetId: !Ref PrivateSubnet2}
 
-  # Private Routing (AZ2)
-  PrivateRouteTable2:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-
-  PrivateRoute2:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable2
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NATGateway2
-
-  PrivateWebSubnet2Assoc:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable2
-      SubnetId: !Ref PrivateWebSubnet2
-
-  PrivateAppSubnet2Assoc:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable2
-      SubnetId: !Ref PrivateAppSubnet2
-
-  # --- SECURITY & PERMISSIONS ---
+  # --- IAM & SECURITY ---
   SSMInstanceRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ec2.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-
+        Statement: [{Effect: Allow, Principal: {Service: ec2.amazonaws.com}, Action: sts:AssumeRole}]
+      ManagedPolicyArns: [arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore]
   SSMInstanceProfile:
     Type: AWS::IAM::InstanceProfile
-    Properties:
-      Roles:
-        - !Ref SSMInstanceRole
+    Properties: {Roles: [!Ref SSMInstanceRole]}
 
   WebSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow HTTP
+      GroupDescription: Allow HTTP and Internal ICMP
       VpcId: !Ref VPC
       SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
+        - {IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0}
+        - {IpProtocol: icmp, FromPort: -1, ToPort: -1, CidrIp: 10.0.0.0/16}
 
-  AppSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Allow traffic from Web tier
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 8080
-          ToPort: 8080
-          SourceSecurityGroupId: !Ref WebSG
-
-  # --- COMPUTE (EC2) ---
+  # --- INSTANCES ---
   WebInstance1:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
       ImageId: !Ref LatestAmiId
-      SubnetId: !Ref PublicSubnet1
+      SubnetId: !Ref PublicSubnet1 # Re-referenced
       IamInstanceProfile: !Ref SSMInstanceProfile
-      SecurityGroupIds: [ !Ref WebSG ]
+      SecurityGroupIds: [!Ref WebSG]
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -263,20 +133,17 @@ Resources:
           yum install -y httpd
           systemctl start httpd
           systemctl enable httpd
-          echo "<h1>Full Name: Ernest Brayce</h1>" > /var/www/html/index.html
-          echo "<h2>Lab: Multi-AZ Fault Tolerant VPC</h2>" >> /var/www/html/index.html
-      Tags:
-        - Key: Name
-          Value: Web-Server-AZ1
+          echo "<h1>Full Name: Ernest Brayce</h1><h2>Lab: Multi-AZ Fault Tolerant VPC</h2>" > /var/www/html/index.html
+      Tags: [{Key: Name, Value: Web-Server-AZ1}]
 
   WebInstance2:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
       ImageId: !Ref LatestAmiId
-      SubnetId: !Ref PublicSubnet2
+      SubnetId: !Ref PublicSubnet2 # Re-referenced
       IamInstanceProfile: !Ref SSMInstanceProfile
-      SecurityGroupIds: [ !Ref WebSG ]
+      SecurityGroupIds: [!Ref WebSG]
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -284,35 +151,18 @@ Resources:
           yum install -y httpd
           systemctl start httpd
           systemctl enable httpd
-          echo "<h1>Full Name: Ernest Brayce</h1>" > /var/www/html/index.html
-          echo "<h2>Lab: Multi-AZ Fault Tolerant VPC</h2>" >> /var/www/html/index.html
-      Tags:
-        - Key: Name
-          Value: Web-Server-AZ2
+          echo "<h1>Full Name: Ernest Brayce</h1><h2>Lab: Multi-AZ Fault Tolerant VPC</h2>" > /var/www/html/index.html
+      Tags: [{Key: Name, Value: Web-Server-AZ2}]
 
   AppInstance1:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
       ImageId: !Ref LatestAmiId
-      SubnetId: !Ref PrivateAppSubnet1
+      SubnetId: !Ref PrivateSubnet1 # Re-referenced
       IamInstanceProfile: !Ref SSMInstanceProfile
-      SecurityGroupIds: [ !Ref AppSG ]
-      Tags:
-        - Key: Name
-          Value: App-Server-AZ1
-
-  AppInstance2:
-    Type: AWS::EC2::Instance
-    Properties:
-      InstanceType: t3.micro
-      ImageId: !Ref LatestAmiId
-      SubnetId: !Ref PrivateAppSubnet2
-      IamInstanceProfile: !Ref SSMInstanceProfile
-      SecurityGroupIds: [ !Ref AppSG ]
-      Tags:
-        - Key: Name
-          Value: App-Server-AZ2
+      SecurityGroupIds: [!Ref WebSG]
+      Tags: [{Key: Name, Value: App-Server-AZ1}]
 
 Outputs:
   VPCId:
@@ -327,21 +177,13 @@ Outputs:
     Description: Public Subnet AZ2
     Value: !Ref PublicSubnet2
 
-  PrivateWebSubnet1Id:
-    Description: Private Web Subnet AZ1
-    Value: !Ref PrivateWebSubnet1
+  PrivateSubnet1Id:
+    Description: Private Subnet AZ1
+    Value: !Ref PrivateSubnet1
 
-  PrivateWebSubnet2Id:
-    Description: Private Web Subnet AZ2
-    Value: !Ref PrivateWebSubnet2
-
-  PrivateAppSubnet1Id:
-    Description: Private App Subnet AZ1
-    Value: !Ref PrivateAppSubnet1
-
-  PrivateAppSubnet2Id:
-    Description: Private App Subnet AZ2
-    Value: !Ref PrivateAppSubnet2
+  PrivateSubnet2Id:
+    Description: Private Subnet AZ2
+    Value: !Ref PrivateSubnet2
 
   WebInstance1Id:
     Description: Web Server AZ1 Instance ID
